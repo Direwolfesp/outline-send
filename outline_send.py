@@ -73,22 +73,28 @@ class Main:
         }
 
         # make api request
-        print(f"Making send request to outline API")
-        response = post(
-            self._outline_url, json=payload, headers=headers
-        ).json()
+        print(f"[DEBUG] Making send request to outline API: {self._outline_url}")
+        print(f"[DEBUG] Payload: {payload}")
 
-        # handle error response
-        if response["status"] != 200:
-            output: TextIO = stderr
-            output.write(f"[ERROR]: {response["message"]} \n")
-            output.write(f"Returned with status code {response["status"]}\n")
-            output.flush()
-            exit(-1)
-        
-        # return doc name if success
-        return response["data"]["title"]
+        try:
+            response = post(
+                self._outline_url, json=payload, headers=headers
+            ).json()
+
+            # handle error response
+            if response["status"] != 200:
+                output: TextIO = stderr
+                output.write(f"[ERROR]: {response["message"]} \n")
+                output.write(f"Returned with status code {response["status"]}\n")
+                output.flush()
+                exit(-1)
             
+            # return doc name if success
+            return response["data"]["title"] if "data" in response and "title" in response["data"] else None
+        except Exception as e:
+            print(f"[ERROR] Exception ocurred while making request: {e}")
+            exit(-1)
+                
         
 
 if __name__ == "__main__":
