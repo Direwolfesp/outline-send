@@ -111,6 +111,6 @@ if __name__ == "__main__":
         Main(url = url)
     else:
         #print("Repo is up to date...")
-        print(f"Usage: \n$ {path.basename(__file__)} https://docs.chiren.xyz/doc/UUID ")
+        print(f"Usage: \n$ {path.basename(__file__)} https://my.outline.app/doc/UUID ")
         exit(-1)
         
