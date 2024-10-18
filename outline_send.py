@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+import json
+import argparse
 from subprocess import run, PIPE
 from os import chdir, getcwd, getenv, listdir, mkdir, path, rmdir
 from sys import exit, stdout, stderr, argv 
@@ -8,109 +10,122 @@ from requests import get, post
 from urllib3 import request, PoolManager
 
 API_UPDATE = "api/documents.update"
-TARGET_FILE = "https://raw.githubusercontent.com/emudev-org/discord-resources/refs/heads/main/emudev_resources_general.md"
-
-
 
 class Main:
-    def __init__(self, url: str) -> None:
-        self._api_key: str | None = getenv("OUTLINE_API_KEY") # get api key
+    def __init__(self, config_file: str) -> None:
 
-        if self._api_key == None:
-            print("[ERROR]: Make sure to add your outline API key as a env var.")
-            print(f"OUTLINE_API_KEY=\"account_token\"")
+        # the whole json dump
+        self.config_data: dict[str, Any] = self.load_config(config_file)
+        if not self.config_data:
+            print("[ERROR]: Failed to load configuration.")
             exit(-1)
 
-        self._uid: str = url.split("/")[-1] # strip uuid from url
+        # get unique outline api token
+        self.api_key: str = self.config_data["outline_api"]
+        if not self.api_key:
+            print("[ERROR] No outline API key provided")
+            exit(-1)
+        
+        # get the array of connections
+        entry_list: list[dict[str, str]] = self.config_data["data"]
+        
+        # process each connection
+        for entry in entry_list:
+            self.process_entry(entry)
 
-        parsed_url: list(str) = url.split("/")[:-2] # get base domain 
-        parsed_url += "/" + API_UPDATE # append api domain
+    def load_config(self, config_file: str) -> dict[Any, Any]:
+        try:
+            with open(config_file, 'r') as file:
+                return json.load(file)
+        except FileNotFoundError:
+            print(f"[ERROR]: Configuration file {config_file} not found.")
+        except json.JSONDecodeError:
+            print(f"[ERROR]: Invalid JSON format in {config_file}.")
+        return None
 
-        self._outline_url = ''.join(str(word) for word in parsed_url) # conver to string
-        self._outline_url = self._outline_url.replace("https:", "https://") # fix url
+    # manages the full process of retreiving and sending the content
+    # uses the same api key
+    def process_entry(self, entry: dict[str, str]) -> None:
+        # get url and folder uid
+        self.source_url: str = entry["source"]
+        self.folder_uid: str = entry["destination"].split("/")[-1]
 
-        self._target_file = TARGET_FILE
-        self._markdown: str = "" 
+        if not self.source_url or not self.folder_uid:
+            print(f"[ERROR]: Missing source or destination in entry: {entry}")
+            return
 
-        # if we are able to get content
+        # we need to get the domain outline api url
+        temp: list(str) = entry["destination"].split("/")[:-2] # sanitize domain
+        temp += "/" + API_UPDATE  # add the desire api path
+
+        self.api_url: str = ''.join(str(word) for word in temp)
+        self.api_url = self.api_url.replace("https:", "https://") 
+
+        # now we got everything, source, uuid and api_url
+
+        # - get content from source_url
         if self.getContent():
-            ### do the thing ###
-            docName: str = self.request()
+            print(f"Sending content to {entry["destination"]}")
 
-            print(f"Succesfully sent message: {self._markdown}")
-            print(f"to document: {docName}")
+            ## pushing content to outline
+            title: str = self.request()
+            print(f"Content sent succesfully to {title}")
         else:
-            print(f"[ERROR] Failed to retreive target content from url.")
-            exit(-1)
+            print(f"[ERROR] Couldn't retrieve content from {self.source_url}. Omiting request.")
 
-    # gets markdown content from raw url and stores in it self._markdown
-    def getContent(self) -> bool:
-        status: bool = False;
-        http = PoolManager()
-        print(f"Started getting markdown content...")
-        response = http.request("GET", self._target_file)
-
-        if response.status == 200:
-            self._markdown = response.data.decode('utf-8')
-            print(f"Markdown content downloaded succesfully.")
-            print(f"{self._markdown}")
-            status = True
-        return status
-
-    # assumes every variable is set correctly
-    # returns String with the document title
+    # asumes every other variable is correct
+    # returns a string with the document title if success
     def request(self) -> str:
         payload: dict[Any, Any] = {
-            "id": self._uid,
-            "text": self._markdown,
+            "id": self.folder_uid,
+            "text": self.content,
             "append": False,
             "publish": True
         }
 
         headers: dict[str, str] = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._api_key}"
+            "Authorization": f"Bearer {self.api_key}"
         }
-
-        # make api request
-        print(f"[DEBUG] Making send request to outline API: {self._outline_url}")
-        print(f"[DEBUG] Payload: {payload}")
 
         try:
             response = post(
-                self._outline_url, json=payload, headers=headers
+                self.api_url, json=payload, headers=headers 
             ).json()
 
             # handle error response
             if response["status"] != 200:
                 output: TextIO = stderr
-                output.write(f"[ERROR]: {response["message"]} \n")
-                output.write(f"Returned with status code {response["status"]}\n")
+                output.write(f"[ERROR]: {response["message"]}\n")
+                output.write(f"Returned with status code {response["status"]}")
                 output.flush()
                 exit(-1)
             
-            # return doc name if success
+            # return document name 
             return response["data"]["title"] if "data" in response and "title" in response["data"] else None
+            
         except Exception as e:
             print(f"[ERROR] Exception ocurred while making request: {e}")
             exit(-1)
-                
-        
+
+    # download markdown from the source url
+    # url MUST contain raw text content 
+    def getContent(self) -> bool:
+        status: bool = False
+        http = PoolManager()
+        print(f"Started getting content from {self.source_url}...")
+        response = http.request("GET", self.source_url)
+
+        if response.status == 200:
+            self.content = response.data.decode("utf-8")
+            print(f"Markdown content downloaded successfully.")
+            status = True
+        return status
+
 
 if __name__ == "__main__":
-    # some vars may be pass as arguments to main
+    parser = argparse.ArgumentParser(description="Send multiple files to Outline documents. Each file is stored in a raw url link.")
+    parser.add_argument('-f', '--file', type=str, required=True, help='Path to the config JSON file.')
+    args = parser.parse_args()
     
-    url: str | None = None # app domain
-    argc: int = len(argv)  
-
-    # only accepts 1 param for now
-    if argc == 2:
-        url = argv[1]
-      
-        # Run
-        Main(url = url)
-    else:
-        #print("Repo is up to date...")
-        print(f"Usage: \n$ {path.basename(__file__)} https://my.outline.app/doc/UUID ")
-        exit(-1)
-        
+    Main(config_file=args.file)
