@@ -1,0 +1,31 @@
+## Description
+This script allows to send markdown content from a link containint the raw text to a desire **Outline Wiki** document.
+I uses [this API request](https://www.getoutline.com/developers#tag/documents/POST/documents.update) from Outline.
+
+## Usage
+First, ensure you have all dependencies installed
+```bash
+$ pip install requests urllib3 
+```
+Now you can run it with:
+```bash
+$ python3 outline_send.py -f FILE.json
+```
+
+### Example configuration file:
+
+```json
+{
+   "outline_api" : "SECRET_API_KEY",
+   "data" : [
+    {
+        "source": "https://raw.file.com/file.md",
+        "destination": "https://your.outline.app/doc/name"
+    },
+    {
+        "source": "https://raw.file.com/file2.md",
+        "destination": "https://your.outline.app/doc/name2"
+    } 
+   ]
+}
+```
