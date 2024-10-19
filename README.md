@@ -9,7 +9,7 @@ $ pip install requests urllib3
 ```
 Now you can run it with:
 ```bash
-$ python3 outline_send.py -f FILE.json
+$ python3 outline_send.py -f FILE.json [-a/--append]
 ```
 
 ### Example configuration file:
