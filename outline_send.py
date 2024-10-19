@@ -130,7 +130,7 @@ class Main:
 if __name__ == "__main__":
     # Initialize arg parse object
     parser = argparse.ArgumentParser(
-        prog='Outline Send', 
+        prog='outline_send.py', 
         description="Send multiple files to Outline documents. Each file is stored in a raw url link."
     )
 
