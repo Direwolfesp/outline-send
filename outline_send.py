@@ -9,6 +9,16 @@ from typing import Any, NoReturn, TextIO
 from requests import get, post
 from urllib3 import request, PoolManager
 
+RED = '\033[31m'
+GREEN = '\033[32m'
+YELLOW = '\033[33m'
+CYAN = '\033[36m'
+GREY = '\033[37m'
+RESET = '\033[0m'
+
+PROMPT: str = YELLOW + "::" + RESET
+ERROR: str = "[" + RED + "ERROR" + RESET + "]:"
+
 API_UPDATE = "api/documents.update"
 
 class Main:
@@ -17,7 +27,7 @@ class Main:
         # the whole json dump
         self.config_data: dict[str, Any] = self.load_config(arg_list[0])
         if not self.config_data:
-            print("[ERROR]: Failed to load configuration.")
+            print(f"{ERROR} Failed to load configuration.")
             exit(-1)
 
         # get append parameter from arg list
@@ -26,7 +36,7 @@ class Main:
         # get unique outline api token
         self.api_key: str = self.config_data["outline_api"]
         if not self.api_key:
-            print("[ERROR] No outline API key provided")
+            print(f"{ERROR} No outline API key provided")
             exit(-1)
         
 
@@ -42,9 +52,9 @@ class Main:
             with open(config_file, 'r') as file:
                 return json.load(file)
         except FileNotFoundError:
-            print(f"[ERROR]: Configuration file {config_file} not found.")
+            print(f"{ERROR} Configuration file {config_file} not found.")
         except json.JSONDecodeError:
-            print(f"[ERROR]: Invalid JSON format in {config_file}.")
+            print(f"{ERROR} Invalid JSON format in {config_file}.")
         return None
 
     # manages the full process of retreiving and sending the content
@@ -55,7 +65,7 @@ class Main:
         self.folder_uid: str = entry["destination"].split("/")[-1]
 
         if not self.source_url or not self.folder_uid:
-            print(f"[ERROR]: Missing source or destination in entry: {entry}")
+            print(f"{ERROR} Missing source or destination in entry: {entry}")
             return
 
         # we need to get the domain outline api url
@@ -69,13 +79,13 @@ class Main:
 
         # - get content from source_url
         if self.getContent():
-            print(f"Sending content to {entry["destination"]}")
+            print(f"{PROMPT} Sending content to {entry["destination"]}")
 
             ## pushing content to outline
             title: str = self.request()
-            print(f"Content sent succesfully to {title}")
+            print(f"{PROMPT} Content sent succesfully to {title}")
         else:
-            print(f"[ERROR] Couldn't retrieve content from {self.source_url}. Omiting request.")
+            print(f"{ERROR} Couldn't retrieve content from {self.source_url}. Omiting request.")
 
     # asumes every other variable is correct
     # returns a string with the document title if success
@@ -100,7 +110,7 @@ class Main:
             # handle error response
             if response["status"] != 200:
                 output: TextIO = stderr
-                output.write(f"[ERROR]: {response["message"]}\n")
+                output.write(f"{ERROR} {response["message"]}\n")
                 output.write(f"Returned with status code {response["status"]}")
                 output.flush()
                 exit(-1)
@@ -109,7 +119,7 @@ class Main:
             return response["data"]["title"] if "data" in response and "title" in response["data"] else None
             
         except Exception as e:
-            print(f"[ERROR] Exception ocurred while making request: {e}")
+            print(f"{ERROR} Exception ocurred while making request: {e}")
             exit(-1)
 
     # download markdown from the source url
@@ -117,12 +127,12 @@ class Main:
     def getContent(self) -> bool:
         status: bool = False
         http = PoolManager()
-        print(f"Started getting content from {self.source_url}...")
+        print(f"{PROMPT} Started getting content from {self.source_url}...")
         response = http.request("GET", self.source_url)
 
         if response.status == 200:
             self.content = response.data.decode("utf-8")
-            print(f"Markdown content downloaded successfully.")
+            print(f"{PROMPT} Markdown content downloaded successfully.")
             status = True
         return status
 
