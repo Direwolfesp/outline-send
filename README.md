@@ -1,6 +1,6 @@
 ## Description
 This script allows to send markdown content from a link containint the raw text to a desire **Outline Wiki** document.
-I uses [this API request](https://www.getoutline.com/developers#tag/documents/POST/documents.update) from Outline.
+I used [this API request](https://www.getoutline.com/developers#tag/documents/POST/documents.update) from Outline.
 
 ## Usage
 First, ensure you have all dependencies installed
