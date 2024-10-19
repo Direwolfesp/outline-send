@@ -12,13 +12,16 @@ from urllib3 import request, PoolManager
 API_UPDATE = "api/documents.update"
 
 class Main:
-    def __init__(self, config_file: str) -> None:
+    def __init__(self, arg_list: list[str]) -> None:
 
         # the whole json dump
-        self.config_data: dict[str, Any] = self.load_config(config_file)
+        self.config_data: dict[str, Any] = self.load_config(arg_list[0])
         if not self.config_data:
             print("[ERROR]: Failed to load configuration.")
             exit(-1)
+
+        # get append parameter from arg list
+        self.append = arg_list[1]
 
         # get unique outline api token
         self.api_key: str = self.config_data["outline_api"]
@@ -26,6 +29,7 @@ class Main:
             print("[ERROR] No outline API key provided")
             exit(-1)
         
+
         # get the array of connections
         entry_list: list[dict[str, str]] = self.config_data["data"]
         
@@ -79,7 +83,7 @@ class Main:
         payload: dict[Any, Any] = {
             "id": self.folder_uid,
             "text": self.content,
-            "append": False,
+            "append": self.append,
             "publish": True
         }
 
@@ -124,8 +128,23 @@ class Main:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Send multiple files to Outline documents. Each file is stored in a raw url link.")
-    parser.add_argument('-f', '--file', type=str, required=True, help='Path to the config JSON file.')
+    # Initialize arg parse object
+    parser = argparse.ArgumentParser(
+        prog='Outline Send', 
+        description="Send multiple files to Outline documents. Each file is stored in a raw url link."
+    )
+
+    # add file flag
+    parser.add_argument(
+        '-f', '--file', type=str, required=True,
+        help='Path to the config JSON file.'
+    )
+
+    # add append flag
+    parser.add_argument(
+        '-a', '--append', action='store_true',
+        help='If enabled, appends content to the end of the document instead of replacing it.'
+    )
     args = parser.parse_args()
     
-    Main(config_file=args.file)
+    Main(arg_list=[args.file, args.append])
