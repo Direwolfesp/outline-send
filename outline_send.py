@@ -10,12 +10,11 @@ from requests import get, post
 from urllib3 import request, PoolManager
 
 RED = '\033[31m'
-GREEN = '\033[32m'
+BLUE = '\033[38;5;31m'
 YELLOW = '\033[33m'
-CYAN = '\033[36m'
-GREY = '\033[37m'
-RESET = '\033[0m'
 
+RESET = '\033[0m'
+FINISH = '   ' + BLUE + '\u2714' + RESET
 PROMPT: str = YELLOW + "::" + RESET
 ERROR: str = "[" + RED + "ERROR" + RESET + "]:"
 
@@ -83,7 +82,7 @@ class Main:
 
             ## pushing content to outline
             title: str = self.request()
-            print(f"{PROMPT} Content sent succesfully to {title}")
+            print(f"{FINISH} Content sent succesfully to {title}")
         else:
             print(f"{ERROR} Couldn't retrieve content from {self.source_url}. Omiting request.")
 
@@ -132,7 +131,7 @@ class Main:
 
         if response.status == 200:
             self.content = response.data.decode("utf-8")
-            print(f"{PROMPT} Markdown content downloaded successfully.")
+            print(f"{FINISH} Markdown content downloaded successfully.")
             status = True
         return status
 
