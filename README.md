@@ -9,9 +9,11 @@ $ pip install requests urllib3
 ```
 Now you can run it with:
 ```bash
-$ python3 outline_send.py -f FILE.json
+$ python3 outline_send.py -f FILE.json [-a/--append]
 ```
-
+> [!Note] 
+> The `--append` toggle is set globally for all the sends targeted in the JSON file.
+> This might be changed in the future so it can be set for each individual send.
 ### Example configuration file:
 
 ```json
